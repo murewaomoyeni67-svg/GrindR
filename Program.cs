@@ -21,10 +21,15 @@ app.MapPost("/api/ai", async (AiRequest request) =>
     var openAiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
     if (!string.IsNullOrWhiteSpace(openAiKey))
     {
-        client.DefaultRequestHeaders.Authorization = new("Bearer", openAiKey);
-        var body = JsonSerializer.Serialize(new { model = "gpt-4o-mini", messages = new[] { new { role = "system", content = system }, new { role = "user", content = request.Message } }, max_tokens = 500 });
-        var response = await client.PostAsync("https://api.openai.com/v1/chat/completions", new StringContent(body, Encoding.UTF8, "application/json"));
-        if (response.IsSuccessStatusCode) { using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync()); return Results.Ok(new { reply = json.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString(), provider = "ChatGPT" }); }
+        try {
+            client.DefaultRequestHeaders.Authorization = new("Bearer", openAiKey);
+            var body = JsonSerializer.Serialize(new { model = "gpt-4o-mini", messages = new[] { new { role = "system", content = system }, new { role = "user", content = request.Message } }, max_tokens = 500 });
+            var response = await client.PostAsync("https://api.openai.com/v1/chat/completions", new StringContent(body, Encoding.UTF8, "application/json"));
+            if (response.IsSuccessStatusCode) { using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync()); return Results.Ok(new { reply = json.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString(), provider = "ChatGPT" }); }
+            return Results.Ok(new { reply = $"OpenAI error: {response.StatusCode} - {await response.Content.ReadAsStringAsync()}", provider = "OpenAI (error)" });
+        } catch (Exception ex) {
+            return Results.Ok(new { reply = $"OpenAI exception: {ex.Message}", provider = "OpenAI (exception)" });
+        }
     }
     if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY"))) return Results.Ok(new { reply = "Claude is configured, but its provider request adapter is next to be enabled.", provider = "Claude" });
     if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GEMINI_API_KEY"))) return Results.Ok(new { reply = "Gemini is configured, but its provider request adapter is next to be enabled.", provider = "Gemini" });
