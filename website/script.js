@@ -154,13 +154,18 @@ document.querySelector('#addMealButton')?.addEventListener('click', () => showTo
 async function askAi() {
   const input = document.querySelector('#aiInput');
   const reply = document.querySelector('#aiReply');
-  if (!input.value.trim()) return;
-  reply.textContent = 'Thinking...';
+  const message = input.value.trim();
+  if (!message) return;
+  reply.innerHTML = '<em>Thinking...</em>';
+  reply.classList.add('ai-thinking');
   try {
-    const response = await fetch(`${apiBase}/api/ai`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: input.value }) });
+    const response = await fetch(`${apiBase}/api/ai`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message }) });
     const data = await response.json();
-    reply.textContent = data.reply || data.error || 'AI is unavailable.';
+    reply.innerHTML = data.reply || data.error || 'AI is unavailable.';
+    reply.classList.remove('ai-thinking');
+    input.value = '';
   } catch { reply.textContent = 'Add an AI key in Railway Variables and redeploy.'; }
 }
 document.querySelectorAll('.ai-suggestions button').forEach((button) => button.addEventListener('click', () => { document.querySelector('#aiInput').value = button.textContent; askAi(); }));
 document.querySelector('#askAiButton')?.addEventListener('click', askAi);
+document.querySelector('#aiInput')?.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); askAi(); } });
